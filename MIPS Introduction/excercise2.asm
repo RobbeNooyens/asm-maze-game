@@ -17,4 +17,5 @@ loop:
 	addi $t0, $t0, 1
 	j loop
 exit:
-	
+	li	$v0, 10
+	syscall
