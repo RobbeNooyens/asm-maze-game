@@ -5,19 +5,25 @@ msg_2:	.asciiz	"-th MIPS-program./n"
 	.text
 
 main:
+	# Read number
 	li 	$v0, 5
 	syscall
+	# Move number to register t0
 	move	$t0, $v0
-	la	$a0, msg_1 	# load the addr of hello_msg into $a0.
-	li 	$v0, 4		# load code for print_string
+	# Print first substring
+	la	$a0, msg_1
+	li 	$v0, 4
 	syscall
+	# Print number
 	la	$a0, ($t0)
 	li	$v0, 1
 	syscall
-	la	$a0, msg_2 	# load the addr of hello_msg into $a0.
-	li 	$v0, 4		# load code for print_string
+	# Print second substring
+	la	$a0, msg_2
+	li 	$v0, 4
 	syscall
 
 exit:
-	li	$v0, 10		# load code for exit
+	# Terminate program
+	li	$v0, 10
 	syscall
