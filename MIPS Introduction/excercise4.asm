@@ -39,8 +39,8 @@ DEFAULT:
 
 exit:
 	# Print a
-	la	$a0, ($t5) 	# load the addr of hello_msg into $a0.
-	li 	$v0, 1		# load code for print_string
+	la	$a0, ($t5)
+	li 	$v0, 1
 	syscall
 	# Terminate program
 	li	$v0, 10
