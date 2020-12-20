@@ -9,12 +9,12 @@ green:		.word 0x0000ff00
 blue:		.word 0x000000ff
 black:		.word 0x00000000
 white:		.word 0x00ffffff
+purple:		.word 0x006a0dad
 # File
 fileName: 	.asciiz "C:/Users/robbe/Documents/University/Bachelor 1/CSA/Mars/Projects/Putting Your Project Together/input.txt"
 fileContent:	.space 2048
 # Characters
 newLine: 	.asciiz "\n"
-# Strings
 
 	.text
 main:
@@ -102,7 +102,6 @@ load_bitmap:
 #	v0: int; width
 #	v1: int; height
 load_bitmap_loop:
-
 	# Load string[index]
 	lb	$t1, ($a0)
 	# Incremeent string pointer
@@ -177,39 +176,11 @@ map_char_to_color:
 	la	$t0, white
 	beq	$a0, 99, map_char_to_color_return
 	# Default
-	la	$t0, white
+	la	$t0, purple
 	#jr	$ra
 map_char_to_color_return:
 	lw	$t1, ($t0)
 	move	$v0, $t1
-	jr	$ra
-
-	
-
-# Maps an x and y coordinate to a memory address
-# Parameters:
-#	a0: int; x
-#	a1: int; y
-# Stack:
-#	$ra
-#	$a1
-#	$a0
-coordinates_to_address:
-	addi	$sp, $sp, -12
-	sw	$ra, 8($sp)
-	sw	$a1, 4($sp)
-	sw	$a0, 0($sp)
-	# Load width and store y * 512 in register t0
-	lw 	$t0, width
-	mult 	$a1, $t0
-	mflo	$t0
-	# Add x
-	addu 	$t0, $t0, $a0
-	# Multiply by 4
-	sll	$t0, $t0, 2
-	# Add the result by the gp (bitmap start) address
-	addu	$v0, $gp, $t0
-	# Jump back
 	jr	$ra
 	
 
