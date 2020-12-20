@@ -18,6 +18,8 @@ newLine: 	.asciiz "\n"
 # Coordinates
 playerRow:	.word 0
 playerColumn:	.word 0
+finishRow:	.word 0
+finishColumn:	.word 0
 # Messages
 victory:	.asciiz "Congratulations! You won!"
 
@@ -25,13 +27,11 @@ victory:	.asciiz "Congratulations! You won!"
 main:
 	la	$a0, fileName
 	jal	load_maze
-	lw	$t0, width
-	lw	$t1, height
-	multu	$t0, $t1
-	mflo	$t0
-	sll	$t0, $t0, 2
-	add	$t1, $gp, $t
-	
+	lw	$a0, playerRow
+	lw	$a1, playerColumn
+	move	$a2, $sp
+	li	$a3, 0
+	jal	dfs
 	j exit
 	#j gameloop
 
@@ -332,7 +332,7 @@ update_player_restore:
 
 # Prints a victory message and terminates the program
 player_won:
-	la	$a0, victory
+	la	$t7, victory
 	jal	print_string
 	j 	exit
 
@@ -367,8 +367,11 @@ dfs:
 	move	$t0, $a3
 	move	$t1, $a2
 	addiu	$a3, $a3, 1
-	subu	$sp, $sp, $a3
+	# Multiply size by 4
+	sll	$t2, $a3, 2
+	subu	$sp, $sp, $t2
 	move	$t2, $sp
+	beq	$t0, $zero, copy_end
 copy:
 	# Copy array to current stackframe
 	lw	$t3, ($t1)
@@ -378,6 +381,7 @@ copy:
 	subiu	$t0, $t0, 1
 	bne	$t0, $zero, copy
 	# Save other values
+copy_end:
 	subiu	$sp, $sp, 20
 	sw	$ra, 16($sp)
 	sw	$s3, 12($sp)
@@ -389,8 +393,8 @@ copy:
 	jal	sleep
 	
 	# Check if player reached the finish
-	lw	$t0, exitRow
-	lw	$t1, exitColumn
+	lw	$t0, finishRow
+	lw	$t1, finishColumn
 	bne	$a0, $t0, not_on_finish
 	bne	$a1, $t1, not_on_finish
 	lw	$v0, victory
@@ -414,8 +418,10 @@ exit_dfs:
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
-	addiu	$sp, $sp, 20
-	addu	$sp, $sp, $a3
+	addiu	$sp, $sp, 24
+	# Multiply size by 4
+	sll	$t0, $a3, 2
+	addu	$sp, $sp, $t0
 	jr	$ra
 
 # One iteration for the for loop
@@ -482,7 +488,7 @@ dfs_loop_move_update_location:
 	jal	update_player_position
 dfs_loop_move_return:
 	lw	$ra, 16($sp)
-	lw	$s3, 12($sp)
+	lw	$a3, 12($sp)
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
@@ -509,35 +515,36 @@ already_visited_found:
 already_visited_return:	
 	jr	$ra
 
-# Retrieves first empty space after the start of the visited items
-# Parameters:
-#	$a0: visited
-# Returns:
-#	$v0: free address
-first_empty_in_visited:
-	lw	$t0, ($a0)
-	beq	$t0, 0, found
-	addiu	$a0, $a0, 1
-	j	first_empty_in_visited
-found:
-	move	$v0, $a0
-	jr	$ra
 
 
 # Prints a string
 # Parameters:
-#	a0: string; value to print
+#	t7: string; value to print
 print_string:
+	subi	$sp, $sp, 8
+	sw	$ra, 4($sp)
+	sw	$a0, 0($sp)
+	move	$a0, $t7
 	li 	$v0,  4
 	syscall
+	lw	$ra, 4($sp)
+	lw	$a0, 0($sp)
+	addi	$sp, $sp, 8
 	jr	$ra
 
 # Prints an integer
 # Parameters:
-#	a0: word; integer to print
+#	t7: word; integer to print
 print_int:
+	subi	$sp, $sp, 8
+	sw	$ra, 4($sp)
+	sw	$a0, 0($sp)
+	move	$a0, $t7
 	li 	$v0,  1
 	syscall
+	lw	$ra, 4($sp)
+	lw	$a0, 0($sp)
+	addi	$sp, $sp, 8
 	jr	$ra
 
 # Sleep t7 milliseconds
@@ -552,7 +559,7 @@ sleep:
 	syscall
 	lw	$ra, 4($sp)
 	lw	$a0, 0($sp)
-	addi	$sp, $sp, 1	
+	addi	$sp, $sp, 8
 	jr	$ra
 
 
