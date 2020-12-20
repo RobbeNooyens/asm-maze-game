@@ -15,6 +15,7 @@ fileName: 	.asciiz "C:/Users/robbe/Documents/University/Bachelor 1/CSA/Mars/Proj
 fileContent:	.space 2048
 # Characters
 newLine: 	.asciiz "\n"
+space:		.asciiz " "
 # Coordinates
 playerRow:	.word 0
 playerColumn:	.word 0
@@ -191,10 +192,16 @@ load_bitmap_loop:
 	sw	$a1, 4($sp)
 	sw	$a0, 0($sp)
 	
+load_bitmap_check_player:
 	# Save player coordinates
-	bne	$t1, 115, load_bitmap_loop_color_pixel
+	bne	$t1, 115, load_bitmap_check_finish
 	sw	$a2, playerRow
 	sw	$a1, playerColumn
+load_bitmap_check_finish:
+	# Save finish coordinates
+	bne	$t1, 117, load_bitmap_loop_color_pixel
+	sw	$a2, finishRow
+	sw	$a1, finishColumn
 load_bitmap_loop_color_pixel:
 	# Set pixel to right color
 	move	$a0, $t1
@@ -389,6 +396,16 @@ copy_end:
 	sw	$a1, 4($sp)
 	sw	$a0, 0($sp)
 	
+	# Debug
+	move	$t7, $a0
+	jal	print_int
+	la	$t7, space
+	jal	print_string
+	move	$t7, $a1
+	jal	print_int
+	la	$t7, newLine
+	jal	print_string
+	
 	li	$t7, 1000
 	jal	sleep
 	
@@ -472,8 +489,10 @@ dfs_loop_move:
 dfs_loop_move_recursive_call:
 	# Load array base address
 	move	$t0, $s4
-	addu	$t0, $t0, $s5
-	sw	$s6, 0($t0)
+	sll	$t1, $s5, 2
+	addu	$t0, $t0, $t1
+	sw	$s6, ($t0)
+	# Prepare arguments
 	move	$a0, $s2
 	move	$a1, $s3
 	move	$a2, $s4
