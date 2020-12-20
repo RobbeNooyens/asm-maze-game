@@ -4,14 +4,15 @@ height:		.word 8
 blue:		.word 0x000000ff
 black:		.word 0x00000000
 yellow:		.word 0x00ffff00
+green:		.word 0x0000ff00
 
 	.text
 
 main:
-	li	$a0, 1
+	li	$a0, 0
 	li	$a1, 6
-	li	$a2, 1
-	li	$a3, 5
+	li	$a2, -1
+	li	$a3, 6
 	jal update_player_position
 	move	$a0, $v0
 	move	$t0, $v1
@@ -40,6 +41,11 @@ update_player_position:
 	sw	$a0, 0($sp)
 	move	$t0, $a0
 	move	$t1, $a1
+	# Check min size
+	move	$v0, $t0
+	move	$v1, $t1
+	bgtu	$a0, 0, update_player_restore
+	bgtu	$a1, 0, update_player_restore
 	# Current player position address
 	jal 	coords_to_address
 	move	$s0, $v0
@@ -48,18 +54,16 @@ update_player_position:
 	move	$a1, $a3
 	jal 	coords_to_address
 	move	$s1, $v0
-	# Check validity
-	move	$v0, $t0
-	move	$v1, $t1
-	blt	$a0, 0, update_player_restore
-	blt	$a1, 0, update_player_restore
+	# Check max size
 	lw	$t0, width
 	lw	$t1, height
-	bge	$a0, $t1, update_player_restore
-	bge	$a1, $t0, update_player_restore
+	bgeu	$a0, $t1, update_player_restore
+	bgeu	$a1, $t0, update_player_restore
 	lw	$t3, ($s1)
 	lw	$t4, blue
 	beq	$t3, $t4, update_player_restore # new spot is wall
+	lw	$t5, green
+	beq	$t3, $t4, player_won # new spot is destination
 	move	$v0, $a0
 	move	$v1, $a1
 	# Color pixels if position is valid
@@ -78,6 +82,11 @@ update_player_restore:
 	lw	$a0, 0($sp)
 	addi	$sp, $sp, 28
 	jr	$ra
+
+player_won:
+	li 	$t1, 6969
+	jal	print_int
+	j 	exit
 
 # Map row and column to an address
 # Parameters:
