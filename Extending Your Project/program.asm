@@ -294,6 +294,7 @@ update_player_position:
 	# Check min size
 	move	$v0, $a0
 	move	$v1, $a1
+	move	$s2, $a0
 	blt	$a0, 0, update_player_restore
 	blt	$a1, 0, update_player_restore
 	# Current player position address
@@ -304,6 +305,7 @@ update_player_position:
 	move	$a1, $a3
 	jal 	coords_to_address
 	move	$s1, $v0
+	move	$v0, $s2
 	# Check max size
 	lw	$t0, width
 	lw	$t1, height
@@ -315,16 +317,16 @@ update_player_position:
 	lw	$t5, green
 	beq	$t3, $t5, player_won # new spot is destination
 	# Move is possible so load the new coordinates
-	move	$v0, $a0
-	move	$v1, $a1
+	move	$v0, $s2
+	move	$v1, $s3
 	# Color pixels if position is valid
 	lw	$t1, black
 	sw	$t1, ($s0)
 	lw	$t1, yellow
 	sw	$t1, ($s1)
 	# Update player coordinates
-	sw	$v0, playerRow
-	sw	$v1, playerColumn
+	sw	$s2, playerRow
+	sw	$s3, playerColumn
 update_player_restore:
 	# Restore values
 	lw	$ra, 24($sp)
@@ -477,6 +479,7 @@ dfs_loop_move:
 	move	$a1, $s1
 	move	$a2, $s2
 	move	$a3, $s3
+	
 	# Move player to new location
 	jal update_player_position
 	move	$s2, $v0
@@ -488,10 +491,20 @@ dfs_loop_move:
 	
 dfs_loop_move_recursive_call:
 	# Load array base address
+	
+	move	$t7, $s4
+	jal	print_int
+	la	$t7, space
+	jal	print_string
+	move	$t7, $s5
+	jal	print_int
+	la	$t7, newLine
+	jal	print_string
+	
 	move	$t0, $s4
 	sll	$t1, $s5, 2
-	addu	$t0, $t0, $t1
-	sw	$s6, ($t0)
+	addu	$t3, $t0, $t1
+	sw	$s6, ($t3)
 	# Prepare arguments
 	move	$a0, $s2
 	move	$a1, $s3
