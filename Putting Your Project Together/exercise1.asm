@@ -9,18 +9,6 @@ green:		.word 0x0000ff00
 blue:		.word 0x000000ff
 black:		.word 0x00000000
 white:		.word 0x00ffffff
-# ASCII
-x:		.word 120
-z:		.word 122
-s:		.word 115
-q:		.word 113
-d:		.word 100
-lf:		.word 10
-w:		.word 119
-p:		.word 112
-u:		.word 117
-e:		.word 101
-c:		.word 99
 # File
 fileName: 	.asciiz "C:/Users/robbe/Documents/University/Bachelor 1/CSA/Mars/Projects/Putting Your Project Together/input.txt"
 fileContent:	.space 2048
@@ -33,7 +21,6 @@ main:
 	la	$a0, fileName
 	jal	load_maze
 	j exit
-
 
 # Loads a maze based on the contents of a file
 # Input:
@@ -67,12 +54,6 @@ load_maze:
 	la 	$a0, fileContent
 	jal	load_bitmap
 	
-	# Debug width and height
-	lw	$a0, width
-	jal 	print_int
-	lw	$a0, height
-	jal 	print_int
-	
 	# Close file
     	li 	$v0,  16
     	move 	$a0, $s0
@@ -85,7 +66,6 @@ load_maze:
     	addi	$sp, $sp, 12
     	
     	jr	$ra
-    	
 
 # Loads bitmap in memory and stores the width and height of the maze from a string in memory
 # Parameters:
@@ -127,6 +107,7 @@ load_bitmap_loop:
 	lb	$t1, ($a0)
 	# Incremeent string pointer
 	addi	$a0, $a0, 1
+	
 	# Switch character
 	beq	$t1, 10, load_bitmap_loop_newline
 	beq	$t1, 0, load_bitmap_loop_file_end
@@ -140,11 +121,6 @@ load_bitmap_loop:
 	move	$a0, $t1
 	jal 	map_char_to_color
 	move 	$t2, $v0
-	
-	# Debugging
-	move	$t2, $v0
-	jal	print_int
-	
 	# Restore values
 	lw	$ra, 8($sp)
 	lw	$a1, 4($sp)
@@ -156,7 +132,6 @@ load_bitmap_loop:
 	add 	$t4, $gp, $t3
 	# Write the color to the bitmap memory
 	sw 	$t2, ($t4)
-	
 	# Increment counter
 	addiu	$a1, $a1, 1
 	
@@ -183,10 +158,27 @@ load_bitmap_loop_return:
 # Returns:
 #	v0: int; color code
 map_char_to_color:
-	la	$t0, blue
-	beq	$a0, 23, map_char_to_color_return
+	# p => black
 	la	$t0, black
-	beq	$a0, 33, map_char_to_color_return
+	beq	$a0, 112, map_char_to_color_return
+	# w => blue
+	la	$t0, blue
+	beq	$a0, 119, map_char_to_color_return
+	# s => yellow
+	la	$t0, yellow
+	beq	$a0, 115, map_char_to_color_return
+	# u => green
+	la	$t0, green
+	beq	$a0, 117, map_char_to_color_return
+	# e => red
+	la	$t0, red
+	beq	$a0, 114, map_char_to_color_return
+	# c => white
+	la	$t0, white
+	beq	$a0, 99, map_char_to_color_return
+	# Default
+	la	$t0, white
+	#jr	$ra
 map_char_to_color_return:
 	lw	$t1, ($t0)
 	move	$v0, $t1
