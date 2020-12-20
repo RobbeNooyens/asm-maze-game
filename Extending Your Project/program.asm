@@ -11,7 +11,7 @@ black:		.word 0x00000000
 white:		.word 0x00ffffff
 purple:		.word 0x006a0dad
 # File
-fileName: 	.asciiz "C:/Users/robbe/Documents/University/Bachelor 1/CSA/Mars/Projects/Putting Your Project Together/input.txt"
+fileName: 	.asciiz "C:/Users/robbe/Documents/University/Bachelor 1/CSA/Mars/Projects/Extending Your Project/input.txt"
 fileContent:	.space 2048
 # Characters
 newLine: 	.asciiz "\n"
@@ -209,6 +209,9 @@ load_bitmap_loop_color_pixel:
 	
 	j load_bitmap_loop
 load_bitmap_loop_newline:
+	addi	$t1, $a0, 1
+	lb	$t2, ($t1)
+	beq	$t2, 0, load_bitmap_loop_file_end
 	# Increment y value
 	addiu	$a2, $a2, 1
 	j load_bitmap_loop
