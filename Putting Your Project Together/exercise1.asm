@@ -23,48 +23,10 @@ playerColumn:	.word 0
 main:
 	la	$a0, fileName
 	jal	load_maze
-	#li	$v0, 32
-	#li	$a0, 2000
-	#syscall
-	#lw	$a0, playerRow
-	#lw	$a1, playerColumn
-	#addiu	$a2, 
-	#jal	update_player_position
 	j exit
 
-# Updates player position
-# Parameters:
-#	a0: current player row
-#	a1: current player column
-#	a2: new player row
-#	a3: new player column
-update_player_position:
-	addi	$sp, $sp, -20
-	sw	$ra, 16($sp)
-	sw	$a3, 12($sp)
-	sw	$a2, 8($sp)
-	sw	$a1, 4($sp)
-	sw	$a0, 0($sp)
-	# Current player position address
-	jal 	coords_to_address
-	lw	$t1, black
-	sw	$v0, ($t0)
-	# New player position address
-	move	$a0, $a2
-	move	$a1, $a3
-	jal 	coords_to_address
-	lw	$t1, yellow
-	sw	$v0, ($t0)
-	# Restore values
-	lw	$ra, 16($sp)
-	lw	$a3, 12($sp)
-	lw	$a2, 8($sp)
-	lw	$a1, 4($sp)
-	lw	$a0, 0($sp)
-	addi	$sp, $sp, 20
-
 # Loads a maze based on the contents of a file
-# Parameters:
+# Input:
 # 	a0: asciiz; fileName
 # Stack:
 # 	$ra
@@ -133,6 +95,10 @@ load_bitmap:
 	div	$t0, $v0
 	mfhi	$t1
 	sw	$t1, playerColumn
+	# Subtract 1 form playerRow to start counting from 0
+	lw	$t0, playerRow
+	addiu	$t0, $t0, -1
+	sw	$t0, playerRow
 	# Load inital values
 	lw	$ra, 4($sp)
 	lw	$a0, 0($sp)
@@ -157,16 +123,17 @@ load_bitmap_loop:
 	beq	$t1, 10, load_bitmap_loop_newline
 	beq	$t1, 0, load_bitmap_loop_file_end
 	
-	# Save player coordinates
-	bne	$t1, 115, load_bitmap_loop_color_pixel
-	lw	$a2, playerRow
-	lw	$a1, playerColumn
-load_bitmap_loop_color_pixel:
 	# Save values
 	addi	$sp, $sp, -12
 	sw	$ra, 8($sp)
 	sw	$a1, 4($sp)
 	sw	$a0, 0($sp)
+	
+	# Save player coordinates
+	bne	$t1, 115, load_bitmap_loop_color_pixel
+	sw	$a2, playerRow
+	sw	$a1, playerColumn
+load_bitmap_loop_color_pixel:
 	# Set pixel to right color
 	move	$a0, $t1
 	jal 	map_char_to_color
@@ -234,26 +201,7 @@ map_char_to_color_return:
 	move	$v0, $t1
 	jr	$ra
 
-# Map row and column to an address
-# Parameters:
-#	a0: column
-#	a1: row
-# Returns:
-#	v0: address
-coords_to_address:
-	# Load width and store y * 512 in register t0
-	lw 	$t0, width
-	mult 	$a1, $t0
-	mflo	$t0
-	# Add x
-	addu 	$t0, $t0, $a0
-	# Multiply by 4
-	sll	$t0, $t0, 2
-	# Add the result by the gp (bitmap start) address
-	addu	$v0, $gp, $t0
-	# Jump back
-	jr	$ra
-	
+
 # Prints a string
 # Parameters:
 #	a0: string; value to print
@@ -261,6 +209,7 @@ print_string:
 	li 	$v0,  4
 	syscall
 	jr	$ra
+
 # Prints an integer
 # Parameters:
 #	a0: word; integer to print
@@ -273,4 +222,3 @@ print_int:
 exit:
 	li	$v0, 10
 	syscall
-
