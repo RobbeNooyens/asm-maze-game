@@ -84,7 +84,7 @@ update_player_restore:
 	jr	$ra
 
 player_won:
-	li 	$t1, 6969
+	li 	$a0, 6969
 	jal	print_int
 	j 	exit
 
