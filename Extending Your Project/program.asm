@@ -33,8 +33,11 @@ main:
 	jal	load_maze
 	lw	$a0, playerRow
 	lw	$a1, playerColumn
+	jal	coords_to_address
+	subu	$sp, $sp, 4
+	sw	$v0, ($sp)
 	move	$a2, $sp
-	li	$a3, 0
+	li	$a3, 1
 	jal	dfs
 	j exit
 	#j gameloop
@@ -426,26 +429,26 @@ copy_end:
 	j	exit_dfs
 not_on_finish:
 	move	$a2, $s2
-	move	$a3, $a3
+	move	$a3, $s3
+	# Links
 	li	$a0, -1
 	li	$a1, 0
 	jal	dfs_loop_move
-	move	$a3, $v0
+	# Rechts
 	li	$a0, 1
 	li	$a1, 0
 	jal	dfs_loop_move
-	move	$a3, $v0
+	# Boven
 	li	$a0, 0
 	li	$a1, -1
 	jal	dfs_loop_move
-	move	$a3, $v0
+	# Onder
 	li	$a0, 0
 	li	$a1, -1
 	jal	dfs_loop_move
 exit_dfs:
 	# Add difference between array pointer and stackpointer to stackpointer
-	subu	$t0, $s2, $sp
-	addu	$sp, $sp, $t0
+	move	$sp, $s2
 	# Restore old values
 	lw	$ra, 36($sp)
 	lw	$s4, 32($sp)
@@ -503,7 +506,6 @@ dfs_loop_move:
 	jal	already_visited
 	beq	$v0, 1, dfs_loop_move_return
 	# Not yet visited
-	
 	move	$a0, $s0
 	move	$a1, $s1
 	move	$a2, $s2
@@ -515,12 +517,17 @@ dfs_loop_move:
 	# Exit if from and to are the same square
 	bne	$v0, $s0, dfs_loop_move_recursive_call
 	beq	$v1, $s1, dfs_loop_move_update_location
-dfs_loop_move_recursive_call:
+dfs_loop_move_recursive_call:	
 	# Load array base address
-	sll	$t1, $s5, 2
-	addu	$t0, $s4, $t1
-	sw	$s6, ($t0)
 	addiu	$s5, $s5, 1
+	sll	$t0, $a3, 2
+	subu	$t0, $s4, $t0
+	subu	$t0, $s4, 4
+	subu	$sp, $sp, 4
+	sw	$s6, 0($t0)
+	# Sleep to visualize
+	li	$t7, 500
+	jal	sleep
 	# Prepare arguments
 	move	$a0, $s2
 	move	$a1, $s3
@@ -548,7 +555,6 @@ dfs_loop_move_return:
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
 	addiu	$sp, $sp, 48
-	move	$v0, $s5
 	jr	$ra
 	
 	
@@ -568,10 +574,15 @@ already_visited:
 	sw	$a0, 0($sp)
 	li	$v0, 0
 	move	$t0, $a0 # Read address
-	move	$t1, $a2 # Counter
+	move	$t1, $a2 # Countdown
+	jal	debug
+	jal	print_newline
 already_visited_loop:
 	beq	$t1, 0, already_visited_return
 	lw	$t2, ($t0)
+	move	$t7, $t2
+	jal	print_int
+	jal	print_newline
 	beq	$t2, $a1, already_visited_found
 	subiu	$t0, $t0, 4
 	subiu	$t1, $t1, 1
@@ -586,8 +597,6 @@ already_visited_return:
 	lw	$a2, 0($sp)
 	addiu	$sp, $sp, 16
 	jr	$ra
-
-
 
 # Prints a string
 # Parameters:
