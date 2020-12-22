@@ -23,6 +23,9 @@ finishRow:	.word 0
 finishColumn:	.word 0
 # Messages
 victory:	.asciiz "Congratulations! You won!"
+dbegin:		.asciiz "Debug Begin"
+dend:		.asciiz "Debug End"
+dmessage:	.asciiz "Debug"
 
 	.text
 main:
@@ -283,8 +286,9 @@ map_char_to_color_return:
 #	v1: actual new column
 update_player_position:
 	# Save initial values
-	addi	$sp, $sp, -28
-	sw	$ra, 24($sp)
+	addi	$sp, $sp, -32
+	sw	$ra, 28($sp)
+	sw	$s2, 24($sp)
 	sw	$s1, 20($sp)
 	sw	$s0, 16($sp)
 	sw	$a3, 12($sp)
@@ -317,26 +321,27 @@ update_player_position:
 	lw	$t5, green
 	beq	$t3, $t5, player_won # new spot is destination
 	# Move is possible so load the new coordinates
-	move	$v0, $s2
-	move	$v1, $s3
+	move	$v0, $a2
+	move	$v1, $a3
 	# Color pixels if position is valid
 	lw	$t1, black
 	sw	$t1, ($s0)
 	lw	$t1, yellow
 	sw	$t1, ($s1)
 	# Update player coordinates
-	sw	$s2, playerRow
-	sw	$s3, playerColumn
+	sw	$a2, playerRow
+	sw	$a3, playerColumn
 update_player_restore:
 	# Restore values
-	lw	$ra, 24($sp)
+	lw	$ra, 28($sp)
+	lw	$s2, 24($sp)
 	lw	$s1, 20($sp)
 	lw	$s0, 16($sp)
 	lw	$a3, 12($sp)
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
-	addi	$sp, $sp, 28
+	addi	$sp, $sp, 32
 	jr	$ra
 
 # Prints a victory message and terminates the program
@@ -372,45 +377,46 @@ coords_to_address:
 #	$a2: visited base pointer
 #	$a3: visited size
 dfs:
+	# Save values
+	subiu	$sp, $sp, 40
+	sw	$ra, 36($sp)
+	sw	$s4, 32($sp)
+	sw	$s3, 28($sp)
+	sw	$s2, 24($sp)
+	sw	$s1, 20($sp)
+	sw	$s0, 16($sp)
+	sw	$a3, 12($sp)
+	sw	$a2, 8($sp)
+	sw	$a1, 4($sp)
+	sw	$a0, 0($sp)
+	# Move arguments to s-registers
+	move	$s0, $a0 # location_row
+	move	$s1, $a1 # location_col
+	move	$s2, $a2 # visited base pointer
+	move	$s3, $a3 # visited size
+	move	$s4, $sp # current stackpointer
+	
+	# Skip copy if array size is 0
+	beq	$s3, $zero, copy_end
 	# Prepare array copy
-	move	$t0, $a3
-	move	$t1, $a2
-	addiu	$a3, $a3, 1
+	move	$t0, $s3 # Index counter
+	move	$t1, $s2 # Read address
+	move	$t2, $sp # Write address
 	# Multiply size by 4
-	sll	$t2, $a3, 2
-	subu	$sp, $sp, $t2
-	move	$t2, $sp
-	beq	$t0, $zero, copy_end
+	sll	$t3, $s3, 2
+	# Create space for array copy on stack
+	subu	$sp, $sp, $t3
 copy:
 	# Copy array to current stackframe
 	lw	$t3, ($t1)
 	sw	$t3, ($t2)
-	addiu	$t1, $t1, 4
-	addiu	$t2, $t2, 4
+	subiu	$t1, $t1, 4
+	subiu	$t2, $t2, 4
 	subiu	$t0, $t0, 1
 	bne	$t0, $zero, copy
-	# Save other values
 copy_end:
-	subiu	$sp, $sp, 20
-	sw	$ra, 16($sp)
-	sw	$s3, 12($sp)
-	sw	$a2, 8($sp)
-	sw	$a1, 4($sp)
-	sw	$a0, 0($sp)
-	
-	# Debug
-	move	$t7, $a0
-	jal	print_int
-	la	$t7, space
-	jal	print_string
-	move	$t7, $a1
-	jal	print_int
-	la	$t7, newLine
-	jal	print_string
-	
-	li	$t7, 1000
-	jal	sleep
-	
+	# Move new visited base pointer to visited base pointer
+	move	$s2, $s4
 	# Check if player reached the finish
 	lw	$t0, finishRow
 	lw	$t1, finishColumn
@@ -419,28 +425,39 @@ copy_end:
 	lw	$v0, victory
 	j	exit_dfs
 not_on_finish:
+	move	$a2, $s2
+	move	$a3, $a3
 	li	$a0, -1
 	li	$a1, 0
 	jal	dfs_loop_move
+	move	$a3, $v0
 	li	$a0, 1
 	li	$a1, 0
 	jal	dfs_loop_move
+	move	$a3, $v0
 	li	$a0, 0
 	li	$a1, -1
 	jal	dfs_loop_move
+	move	$a3, $v0
 	li	$a0, 0
 	li	$a1, -1
 	jal	dfs_loop_move
 exit_dfs:
-	lw	$ra, 16($sp)
+	# Add difference between array pointer and stackpointer to stackpointer
+	subu	$t0, $s2, $sp
+	addu	$sp, $sp, $t0
+	# Restore old values
+	lw	$ra, 36($sp)
+	lw	$s4, 32($sp)
+	lw	$s3, 28($sp)
+	lw	$s2, 24($sp)
+	lw	$s1, 20($sp)
+	lw	$s0, 16($sp)
 	lw	$a3, 12($sp)
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
-	addiu	$sp, $sp, 24
-	# Multiply size by 4
-	sll	$t0, $a3, 2
-	addu	$sp, $sp, $t0
+	addiu	$sp, $sp, 40
 	jr	$ra
 
 # One iteration for the for loop
@@ -451,60 +468,59 @@ exit_dfs:
 #	a3: visited array size
 dfs_loop_move:
 	# Save values
-	subiu	$sp, $sp, 20
-	sw	$ra, 16($sp)
-	sw	$ra, 12($sp)
+	subiu	$sp, $sp, 48
+	sw	$ra, 44($sp)
+	sw	$s6, 40($sp)
+	sw	$s5, 36($sp)
+	sw	$s4, 32($sp)
+	sw	$s3, 28($sp)
+	sw	$s2, 24($sp)
+	sw	$s1, 20($sp)
+	sw	$s0, 16($sp)
+	sw	$a3, 12($sp)
 	sw	$a2, 8($sp)
 	sw	$a1, 4($sp)
 	sw	$a0, 0($sp)
 	# Load current player coordinates
 	lw	$s0, playerRow
 	lw	$s1, playerColumn
-	# Load next coordinates
-	add	$s2, $a0, $s0
-	add	$s3, $a1, $s1
-	move	$s4, $a2
-	move	$s5, $a3
+	
+	# Move arguments to s-variables
+	addu	$s2, $s0, $a0 # nextRow
+	addu	$s3, $s1, $a1 # nextColumn
+	move	$s4, $a2 # array base pointer
+	move	$s5, $a3 # array size
+	li	$s6, 0 # target block address
+	
 	# Calculate target address
 	move	$a0, $s2
 	move	$a1, $s3
 	jal	coords_to_address
 	move	$s6, $v0
-	move	$a1, $v0
-	move	$a0, $a2
+	move	$a2, $a3
+	move	$a1, $s6
+	move	$a0, $s4
 	jal	already_visited
 	beq	$v0, 1, dfs_loop_move_return
 	# Not yet visited
+	
 	move	$a0, $s0
 	move	$a1, $s1
 	move	$a2, $s2
 	move	$a3, $s3
-	
 	# Move player to new location
 	jal update_player_position
 	move	$s2, $v0
 	move	$s3, $v1
-	
 	# Exit if from and to are the same square
 	bne	$v0, $s0, dfs_loop_move_recursive_call
 	beq	$v1, $s1, dfs_loop_move_update_location
-	
 dfs_loop_move_recursive_call:
 	# Load array base address
-	
-	move	$t7, $s4
-	jal	print_int
-	la	$t7, space
-	jal	print_string
-	move	$t7, $s5
-	jal	print_int
-	la	$t7, newLine
-	jal	print_string
-	
-	move	$t0, $s4
 	sll	$t1, $s5, 2
-	addu	$t3, $t0, $t1
-	sw	$s6, ($t3)
+	addu	$t0, $s4, $t1
+	sw	$s6, ($t0)
+	addiu	$s5, $s5, 1
 	# Prepare arguments
 	move	$a0, $s2
 	move	$a1, $s3
@@ -519,12 +535,20 @@ dfs_loop_move_update_location:
 	move	$a3, $s1
 	jal	update_player_position
 dfs_loop_move_return:
-	lw	$ra, 16($sp)
+	lw	$ra, 44($sp)
+	lw	$s6, 40($sp)
+	lw	$s5, 36($sp)
+	lw	$s4, 32($sp)
+	lw	$s3, 28($sp)
+	lw	$s2, 24($sp)
+	lw	$s1, 20($sp)
+	lw	$s0, 16($sp)
 	lw	$a3, 12($sp)
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
-	addiu	$sp, $sp, 20
+	addiu	$sp, $sp, 48
+	move	$v0, $s5
 	jr	$ra
 	
 	
@@ -532,19 +556,35 @@ dfs_loop_move_return:
 # Parameters:
 #	$a0: visited
 #	$a1: address
+#	$a2: array size
 # Returns:
 #	$v0: bool; visited
 already_visited:
+	# Save values
+	subiu	$sp, $sp, 16
+	sw	$ra, 12($sp)
+	sw	$a2, 8($sp)
+	sw	$a1, 4($sp)
+	sw	$a0, 0($sp)
 	li	$v0, 0
-	move	$v1, $a0
-	lw	$t0, ($a0)
-	beq	$t0, 0, already_visited_return
-	beq	$t0, $a1, already_visited_found
-	addi	$a0, $a0, 4
-	j	already_visited
+	move	$t0, $a0 # Read address
+	move	$t1, $a2 # Counter
+already_visited_loop:
+	beq	$t1, 0, already_visited_return
+	lw	$t2, ($t0)
+	beq	$t2, $a1, already_visited_found
+	subiu	$t0, $t0, 4
+	subiu	$t1, $t1, 1
+	j	already_visited_loop
 already_visited_found:
 	li	$v0, 1
-already_visited_return:	
+already_visited_return:
+	# Restore values
+	lw	$ra, 12($sp)
+	lw	$a2, 8($sp)
+	lw	$a1, 4($sp)
+	lw	$a2, 0($sp)
+	addiu	$sp, $sp, 16
 	jr	$ra
 
 
@@ -557,6 +597,48 @@ print_string:
 	sw	$ra, 4($sp)
 	sw	$a0, 0($sp)
 	move	$a0, $t7
+	li 	$v0,  4
+	syscall
+	lw	$ra, 4($sp)
+	lw	$a0, 0($sp)
+	addi	$sp, $sp, 8
+	jr	$ra
+
+# Prints a newline
+print_newline:
+	subi	$sp, $sp, 8
+	sw	$ra, 4($sp)
+	sw	$a0, 0($sp)
+	move	$a0, $t7
+	la	$a0, newLine
+	li 	$v0,  4
+	syscall
+	lw	$ra, 4($sp)
+	lw	$a0, 0($sp)
+	addi	$sp, $sp, 8
+	jr	$ra
+
+# Prints a space
+print_space:
+	subi	$sp, $sp, 8
+	sw	$ra, 4($sp)
+	sw	$a0, 0($sp)
+	move	$a0, $t7
+	la	$a0, space
+	li 	$v0,  4
+	syscall
+	lw	$ra, 4($sp)
+	lw	$a0, 0($sp)
+	addi	$sp, $sp, 8
+	jr	$ra
+
+# Print debug message
+debug:
+	subi	$sp, $sp, 8
+	sw	$ra, 4($sp)
+	sw	$a0, 0($sp)
+	move	$a0, $t7
+	la	$a0, dmessage
 	li 	$v0,  4
 	syscall
 	lw	$ra, 4($sp)
@@ -578,6 +660,8 @@ print_int:
 	lw	$a0, 0($sp)
 	addi	$sp, $sp, 8
 	jr	$ra
+
+
 
 # Sleep t7 milliseconds
 # Parameters:
