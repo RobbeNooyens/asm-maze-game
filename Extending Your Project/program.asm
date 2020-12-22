@@ -430,19 +430,19 @@ copy_end:
 not_on_finish:
 	move	$a2, $s2
 	move	$a3, $s3
-	# Links
+	# Boven
 	li	$a0, -1
 	li	$a1, 0
 	jal	dfs_loop_move
-	# Rechts
+	# Onder
 	li	$a0, 1
 	li	$a1, 0
 	jal	dfs_loop_move
-	# Boven
+	# Links
 	li	$a0, 0
 	li	$a1, -1
 	jal	dfs_loop_move
-	# Onder
+	# Rechts
 	li	$a0, 0
 	li	$a1, -1
 	jal	dfs_loop_move
@@ -518,13 +518,13 @@ dfs_loop_move:
 	bne	$v0, $s0, dfs_loop_move_recursive_call
 	beq	$v1, $s1, dfs_loop_move_update_location
 dfs_loop_move_recursive_call:	
-	# Load array base address
-	addiu	$s5, $s5, 1
-	sll	$t0, $a3, 2
+	# Store address on stack
+	sll	$t0, $s5, 2
 	subu	$t0, $s4, $t0
-	subu	$t0, $s4, 4
 	subu	$sp, $sp, 4
 	sw	$s6, 0($t0)
+	# Add 1 to stacksize
+	addiu	$s5, $s5, 1
 	# Sleep to visualize
 	li	$t7, 500
 	jal	sleep
@@ -575,14 +575,14 @@ already_visited:
 	li	$v0, 0
 	move	$t0, $a0 # Read address
 	move	$t1, $a2 # Countdown
-	jal	debug
-	jal	print_newline
+	#jal	debug
+	#jal	print_newline
 already_visited_loop:
 	beq	$t1, 0, already_visited_return
 	lw	$t2, ($t0)
-	move	$t7, $t2
-	jal	print_int
-	jal	print_newline
+	#move	$t7, $t2
+	#jal	print_int
+	#jal	print_newline
 	beq	$t2, $a1, already_visited_found
 	subiu	$t0, $t0, 4
 	subiu	$t1, $t1, 1
@@ -594,7 +594,7 @@ already_visited_return:
 	lw	$ra, 12($sp)
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
-	lw	$a2, 0($sp)
+	lw	$a0, 0($sp)
 	addiu	$sp, $sp, 16
 	jr	$ra
 
