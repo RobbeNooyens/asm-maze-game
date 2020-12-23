@@ -2,7 +2,6 @@
 # Dimensions
 width: 		.word 32
 height: 	.word 32
-mazeSize:	.word 1024
 # Colors
 red:		.word 0x00ff0000
 yellow:		.word 0x00ffff00
@@ -27,7 +26,6 @@ victory:	.asciiz "Congratulations! You won!"
 dmessage:	.asciiz "Debug"
 # Environment
 delay:		.word 60
-finishVisible:	.byte 0
 
 	.text
 main:
@@ -161,9 +159,6 @@ load_bitmap:
 	# Store width and height in memory
 	sw	$v0, width
 	sw	$v1, height
-	mult	$v0, $v1
-	mflo	$t0
-	sw	$t0, mazeSize
 	# Save player column index
 	lw	$t0, playerColumn
 	div	$t0, $v0
@@ -268,7 +263,7 @@ map_char_to_color:
 	la	$t0, yellow
 	beq	$a0, 115, map_char_to_color_return
 	# u => green
-	la	$t0, black
+	la	$t0, green
 	beq	$a0, 117, map_char_to_color_return
 	# e => red
 	la	$t0, red
@@ -339,8 +334,6 @@ update_player_position:
 	# Update player coordinates
 	sw	$a2, playerRow
 	sw	$a3, playerColumn
-	# Check if all candy is eaten
-	jal	check_candy
 update_player_restore:
 	# Restore values
 	lw	$ra, 28($sp)
@@ -551,10 +544,8 @@ dfs_loop_move_update_location:
 	move	$a3, $s1
 	jal	update_player_position
 	# Sleep to visualize
-	move	$t0, $v0
 	li	$a0, 100
 	jal	sleep
-	move	$v0, $t0
 dfs_loop_move_return:
 	move	$sp, $s7
 	lw	$ra, 48($sp)
@@ -607,36 +598,6 @@ already_visited_return:
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
 	addiu	$sp, $sp, 16
-	jr	$ra
-
-check_candy:
-	li	$v0, 0
-	# Check if finish is already visible
-	lw	$t0, finishVisible
-	beq	$t0, 1, check_candy_end
-	# Load color code for white
-	lw	$t6, white
-	lw	$t7, green
-	# Load counter
-	lw	$t1, mazeSize
-	# Load pointer
-	li	$t2, 0x10008000
-check_candy_loop:
-	beq	$t1, 0, check_candy_end
-	subiu	$t1, $t1, 1
-	addiu	$t2, $t2, 4
-	lw	$t3, ($t2)
-	bne	$t3, $t6, check_candy_loop
-	# Found candy
-	li	$v0, 1
-	j	check_candy_end
-show_finish:
-	lw	$a0, finishRow
-	lw	$a1, finishColumn
-	jal	coords_to_address
-	move	$t0, $v0
-	sw	$t7, ($t2)
-check_candy_end:
 	jr	$ra
 
 # Prints a string
