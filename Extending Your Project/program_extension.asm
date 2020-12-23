@@ -42,29 +42,28 @@ main:
 	j exit
 	#j gameloop
 
-# Checks for input every (delay) ms
+# Checks for input every 60 ms
 gameloop:
 	# Sleep for 2 seconds
-	lw	$a0, delay
+	li	$t7, 60
 	jal	sleep
 	# Check for input
-	la	$t0, 0xffff0000
-	lw	$t1, ($t0)
-	beq	$t1, 1, input_available
+	la	$t1, 0xffff0000
+	lw	$t2, ($t1)
+	beq	$t2, 1, input_available
 	j gameloop
 
 # Function called when input is available
 input_available:
 	# Load latest character
-	la	$t0, 0xffff0004
-	lw	$t1, ($t0)
+	la	$t1, 0xffff0004
+	lw	$t2, ($t1)
 	# Switch latest character
-	beq	$t1, 119, pressed_z
-	beq	$t1, 97, pressed_q
-	beq	$t1, 115, pressed_s
-	beq	$t1, 100, pressed_d
-	beq	$t1, 120, pressed_x
-	j	gameloop
+	beq	$t2, 119, pressed_z
+	beq	$t2, 97, pressed_q
+	beq	$t2, 115, pressed_s
+	beq	$t2, 100, pressed_d
+	beq	$t2, 120, pressed_x
 handled_input:
 	# Executed when press event has been handled
 	lw	$a0, playerRow
@@ -97,13 +96,18 @@ pressed_x:
 
 # Loads a maze based on the contents of a file
 # Input:
-# 	a0: string; file
+# 	a0: asciiz; fileName
+# Stack:
+# 	$ra
+#	$t0
+#	$a0
 load_maze:
 	# Save return address and argument to the stack
 	addi	$sp, $sp, -12
 	sw	$ra, 8($sp)
 	sw	$s0, 4($sp)
 	sw	$a0, 0($sp)
+	
 	# Read the file
 	# Filename is still in a0
 	li	$v0, 13
@@ -117,18 +121,22 @@ load_maze:
 	la 	$a1, fileContent
 	la 	$a2, 2048
 	syscall
+	
 	# Loads bitmap
 	la 	$a0, fileContent
 	jal	load_bitmap
+	
 	# Close file
     	li 	$v0,  16
     	move 	$a0, $s0
     	syscall
+    	
     	# Load initial values from Stack
     	lw	$ra, 8($sp)
     	lw	$s0, 4($sp)
     	lw	$a0, 0($sp)
     	addi	$sp, $sp, 12
+    	
     	jr	$ra
 
 # Loads bitmap in memory and stores the width and height of the maze from a string in memory
@@ -179,14 +187,17 @@ load_bitmap_loop:
 	lb	$t1, ($a0)
 	# Incremeent string pointer
 	addi	$a0, $a0, 1
+	
 	# Switch character
 	beq	$t1, 10, load_bitmap_loop_newline
 	beq	$t1, 0, load_bitmap_loop_file_end
+	
 	# Save values
 	addi	$sp, $sp, -12
 	sw	$ra, 8($sp)
 	sw	$a1, 4($sp)
 	sw	$a0, 0($sp)
+	
 load_bitmap_check_player:
 	# Save player coordinates
 	bne	$t1, 115, load_bitmap_check_finish
@@ -215,6 +226,7 @@ load_bitmap_loop_color_pixel:
 	sw 	$t2, ($t4)
 	# Increment counter
 	addiu	$a1, $a1, 1
+	
 	j load_bitmap_loop
 load_bitmap_loop_newline:
 	addi	$t1, $a0, 1
@@ -277,11 +289,8 @@ map_char_to_color_return:
 #	v1: actual new column
 update_player_position:
 	# Save initial values
-	subi	$sp, $sp, 44
-	sw	$ra, 40($sp)
-	sw	$s5, 36($sp)
-	sw	$s4, 32($sp)
-	sw	$s3, 28($sp)
+	addi	$sp, $sp, -32
+	sw	$ra, 28($sp)
 	sw	$s2, 24($sp)
 	sw	$s1, 20($sp)
 	sw	$s0, 16($sp)
@@ -289,54 +298,45 @@ update_player_position:
 	sw	$a2, 8($sp)
 	sw	$a1, 4($sp)
 	sw	$a0, 0($sp)
-	# Move arguments to s-registers
-	move	$s0, $a0 # Row from
-	move	$s1, $a1 # Column from
-	move	$s2, $a2 # Row to
-	move	$s3, $s3 # Column to
 	# Check min size
-	move	$v0, $s0
-	move	$v1, $s1
-	blt	$s0, 0, update_player_restore
-	blt	$s1, 0, update_player_restore
+	move	$v0, $a0
+	move	$v1, $a1
+	move	$s2, $a0
+	blt	$a0, 0, update_player_restore
+	blt	$a1, 0, update_player_restore
 	# Current player position address
 	jal 	coords_to_address
-	move	$s4, $v0
+	move	$s0, $v0
 	# New player position address
-	move	$a0, $s2
-	move	$a1, $s3
+	move	$a0, $a2
+	move	$a1, $a3
 	jal 	coords_to_address
-	move	$s5, $v0
-	move	$v0, $s0
+	move	$s1, $v0
+	move	$v0, $s2
 	# Check max size
 	lw	$t0, width
 	lw	$t1, height
-	bge	$s0, $t1, update_player_restore
-	bge	$s1, $t0, update_player_restore
-	lw	$t0, ($s5)
-	lw	$t1, blue
-	beq	$t0, $t1, update_player_restore # new spot is wall
-	lw	$t1, green
-	beq	$t0, $t1, player_won # new spot is destination
-
-	beq	$s4, $s5, update_player_restore
+	bge	$a0, $t1, update_player_restore
+	bge	$a1, $t0, update_player_restore
+	lw	$t3, ($s1)
+	lw	$t4, blue
+	beq	$t3, $t4, update_player_restore # new spot is wall
+	lw	$t5, green
+	beq	$t3, $t5, player_won # new spot is destination
 	# Move is possible so load the new coordinates
-	move	$v0, $s2
-	move	$v1, $s3
+	move	$v0, $a2
+	move	$v1, $a3
 	# Color pixels if position is valid
 	lw	$t1, black
-	sw	$t1, ($s4)
+	sw	$t1, ($s0)
 	lw	$t1, yellow
-	sw	$t1, ($s5)
+	sw	$t1, ($s1)
 	# Update player coordinates
-	sw	$s2, playerRow
-	sw	$s3, playerColumn
+	sw	$a2, playerRow
+	sw	$a3, playerColumn
 update_player_restore:
 	# Restore values
-	lw	$ra, 40($sp)
-	lw	$s5, 36($sp)
-	lw	$s4, 32($sp)
-	lw	$s3, 28($sp)
+	lw	$ra, 28($sp)
 	lw	$s2, 24($sp)
 	lw	$s1, 20($sp)
 	lw	$s0, 16($sp)
@@ -344,12 +344,12 @@ update_player_restore:
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
-	addi	$sp, $sp, 44
+	addi	$sp, $sp, 32
 	jr	$ra
 
 # Prints a victory message and terminates the program
 player_won:
-	la	$a0, victory
+	la	$t7, victory
 	jal	print_string
 	j 	exit
 
@@ -495,7 +495,7 @@ dfs_loop_move:
 	move	$s4, $a2 # array base pointer
 	move	$s5, $a3 # array size
 	li	$s6, 0 # target block address
-	move	$s7, $sp # stackpointer copy
+	move	$s7, $sp
 	
 	# Calculate target address
 	move	$a0, $s2
@@ -528,7 +528,7 @@ dfs_loop_move_recursive_call:
 	# Add 1 to stacksize
 	addiu	$s5, $s5, 1
 	# Sleep to visualize
-	lw	$a0, delay
+	li	$t7, 100
 	jal	sleep
 	# Prepare arguments
 	move	$a0, $s2
@@ -544,7 +544,7 @@ dfs_loop_move_update_location:
 	move	$a3, $s1
 	jal	update_player_position
 	# Sleep to visualize
-	lw	$a0, delay
+	li	$t7, 100
 	jal	sleep
 dfs_loop_move_return:
 	move	$sp, $s7
@@ -561,9 +561,10 @@ dfs_loop_move_return:
 	lw	$a2, 8($sp)
 	lw	$a1, 4($sp)
 	lw	$a0, 0($sp)
-	addiu	$sp, $sp, 52
+	addiu	$sp, $sp, 48
 	jr	$ra
-
+	
+	
 # Checks if the address has already been visited
 # Parameters:
 #	$a0: visited
@@ -601,10 +602,17 @@ already_visited_return:
 
 # Prints a string
 # Parameters:
-#	a0: string; value to print
+#	t7: string; value to print
 print_string:
+	subi	$sp, $sp, 8
+	sw	$ra, 4($sp)
+	sw	$a0, 0($sp)
+	move	$a0, $t7
 	li 	$v0,  4
 	syscall
+	lw	$ra, 4($sp)
+	lw	$a0, 0($sp)
+	addi	$sp, $sp, 8
 	jr	$ra
 
 # Prints a newline
@@ -657,6 +665,8 @@ print_int:
 	syscall
 	jr	$ra
 
+
+
 # Sleep a0 milliseconds
 # Parameters:
 #	a0: milliseconds to sleep
@@ -664,6 +674,7 @@ sleep:
 	li	$v0, 32
 	syscall
 	jr	$ra
+
 
 # Terminates program
 exit:
