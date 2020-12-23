@@ -318,15 +318,11 @@ update_player_position:
 	beq	$t0, $t1, update_player_restore # new spot is wall
 	lw	$t1, green
 	beq	$t0, $t1, player_won # new spot is destination
+
+	beq	$s4, $s5, update_player_restore
 	# Move is possible so load the new coordinates
 	move	$v0, $s2
 	move	$v1, $s3
-	move	$a0, $s4
-	jal	print_int
-	jal	print_space
-	move	$a0, $s5
-	jal	print_int
-	jal	print_newline
 	# Color pixels if position is valid
 	lw	$t1, black
 	sw	$t1, ($s4)
